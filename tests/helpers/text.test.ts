@@ -124,6 +124,6 @@ describe('countCharacters', () => {
 
   test('should count all types of characters together', () => {
     expect(countCharacters('Hello, World! 123 🌍')).toBe(20);
-    expect(countCharacters('Mix3d Ch@rs & Numb3rs!')).toBe(23);
+    expect(countCharacters('Mix3d Ch@rs & Numb3rs!')).toBe(22);
   });
 });

@@ -1,4 +1,4 @@
-import { countWords } from '../../src/helpers/wordCount';
+import { countWords } from '../../src/helpers/text';
 
 describe('countWords', () => {
   test('should return 0 for empty string', () => {

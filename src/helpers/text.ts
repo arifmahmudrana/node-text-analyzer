@@ -7,3 +7,7 @@ export function countWords(text: string): number {
   
   return words.length;
 }
+
+export function countCharacters(text: string): number {
+  return text.length;
+}

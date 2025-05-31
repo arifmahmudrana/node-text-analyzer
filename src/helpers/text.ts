@@ -31,3 +31,14 @@ export function countSentences(text: string): number {
   
   return endsWithPunctuation ? sentences.length : Math.max(0, sentences.length - 1);
 }
+
+export function countParagraphs(text: string): number {
+  if (!text || text.trim().length === 0) {
+    return 0;
+  }
+  
+  // Split by double newlines (or more) and count non-empty paragraphs
+  const paragraphs = text.split(/\n\s*\n/).filter(paragraph => paragraph.trim().length > 0);
+  
+  return paragraphs.length;
+}

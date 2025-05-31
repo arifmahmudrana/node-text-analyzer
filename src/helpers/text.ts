@@ -42,3 +42,34 @@ export function countParagraphs(text: string): number {
   
   return paragraphs.length;
 }
+
+// Get the longest word in each paragraph
+// Returns an array of longest words, one for each paragraph
+// If a paragraph has no words, it returns an empty string for that paragraph
+// If the text is empty or only contains whitespace, it returns an empty array
+// Assumes words are separated by whitespace and punctuation is ignored
+// If there are ties, it returns the first longest word found
+// Words are lowercased
+export function getLongestWordsInParagraphs(text: string): string[] {
+  if (!text || text.trim().length === 0) {
+    return [];
+  }
+  
+  // Split into paragraphs
+  const paragraphs = text.split(/\n\s*\n/).filter(paragraph => paragraph.trim().length > 0);
+  
+  return paragraphs.map(paragraph => {
+    // Clean paragraph and split into words
+    const cleanParagraph = paragraph.replace(/[^\w\s]/g, '').toLowerCase();
+    const words = cleanParagraph.split(/\s+/).filter(word => word.length > 0);
+    
+    if (words.length === 0) {
+      return '';
+    }
+    
+    // Find the longest word (first one if there are ties)
+    return words.reduce((longest, current) => 
+      current.length > longest.length ? current : longest
+    );
+  });
+}

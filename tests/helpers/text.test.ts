@@ -1,4 +1,4 @@
-import { countWords, countCharacters } from '../../src/helpers/text';
+import { countWords, countCharacters, countSentences } from '../../src/helpers/text';
 
 describe('countWords', () => {
   test('should return 0 for empty string', () => {
@@ -125,5 +125,95 @@ describe('countCharacters', () => {
   test('should count all types of characters together', () => {
     expect(countCharacters('Hello, World! 123 🌍')).toBe(20);
     expect(countCharacters('Mix3d Ch@rs & Numb3rs!')).toBe(22);
+  });
+});
+
+describe('countSentences', () => {
+  test('should return 0 for empty string', () => {
+    expect(countSentences('')).toBe(0);
+  });
+
+  test('should return 0 for string with only whitespace', () => {
+    expect(countSentences('   ')).toBe(0);
+    expect(countSentences('\t\n  ')).toBe(0);
+  });
+
+  test('should count single sentence ending with period', () => {
+    expect(countSentences('Hello world.')).toBe(1);
+    expect(countSentences('This is a test.')).toBe(1);
+  });
+
+  test('should count single sentence ending with exclamation mark', () => {
+    expect(countSentences('Hello world!')).toBe(1);
+    expect(countSentences('What a great day!')).toBe(1);
+  });
+
+  test('should count single sentence ending with question mark', () => {
+    expect(countSentences('How are you?')).toBe(1);
+    expect(countSentences('What time is it?')).toBe(1);
+  });
+
+  test('should count multiple sentences with different endings', () => {
+    expect(countSentences('Hello world. How are you?')).toBe(2);
+    expect(countSentences('This is great! Are you sure? Yes, I am.')).toBe(3);
+  });
+
+  test('should handle multiple spaces between sentences', () => {
+    expect(countSentences('First sentence.  Second sentence.')).toBe(2);
+    expect(countSentences('One.   Two!    Three?')).toBe(3);
+  });
+
+  test('should handle sentences with multiple punctuation marks', () => {
+    expect(countSentences('Really?!')).toBe(1);
+    expect(countSentences('Wow!!!')).toBe(1);
+    expect(countSentences('What???')).toBe(1);
+    expect(countSentences('Amazing... Right?')).toBe(2);
+  });
+
+  test('should handle sentences ending at end of string', () => {
+    expect(countSentences('Hello world.')).toBe(1);
+    expect(countSentences('First sentence. Second sentence.')).toBe(2);
+    expect(countSentences('Question?')).toBe(1);
+  });
+
+  test('should handle newlines and mixed whitespace', () => {
+    expect(countSentences('First sentence.\nSecond sentence.')).toBe(2);
+    expect(countSentences('One!\tTwo? Three.')).toBe(3);
+  });
+
+  test('should handle abbreviations and numbers (simple counting)', () => {
+    expect(countSentences('The price is $12.99')).toBe(1); // Counts decimal as sentence ending
+    expect(countSentences('Mr. Smith went to the store')).toBe(1); // Counts abbreviation as sentence ending
+    expect(countSentences('The temperature was 98.6 degrees')).toBe(1); // Counts decimal as sentence ending
+    expect(countSentences('Dr. Johnson and Ms. Williams arrived')).toBe(2); // Counts both abbreviations
+  });
+
+  test('should handle mixed content with abbreviations and sentences', () => {
+    expect(countSentences('Mr. Smith said hello. How are you?')).toBe(3); // Counts abbreviation + 2 real sentences
+    expect(countSentences('The cost is $15.99. Do you want it?')).toBe(3); // Counts decimal + 1 real sentence
+  });
+
+  test('should handle text without sentence endings', () => {
+    expect(countSentences('Hello world')).toBe(0);
+    expect(countSentences('This is a test')).toBe(0);
+    expect(countSentences('No punctuation here')).toBe(0);
+  });
+
+  test('should handle complex punctuation scenarios', () => {
+    expect(countSentences('Hello... world.')).toBe(2);
+    expect(countSentences('Wait! Stop! Go!')).toBe(3);
+    expect(countSentences('Is this right? Yes! No?')).toBe(3);
+  });
+
+  test('should handle edge cases with only punctuation', () => {
+    expect(countSentences('.')).toBe(0);
+    expect(countSentences('!')).toBe(0);
+    expect(countSentences('?')).toBe(0);
+    expect(countSentences('...')).toBe(0); // Ellipsis alone doesn't count
+  });
+
+  test('should handle long paragraphs', () => {
+    const paragraph = 'This is the first sentence. This is the second sentence! Is this the third? Yes, it is.';
+    expect(countSentences(paragraph)).toBe(4);
   });
 });

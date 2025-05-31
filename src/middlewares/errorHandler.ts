@@ -13,6 +13,17 @@ export const errorHandler = (
   let message = 'Internal server error';
   let errors = null;
 
+  // Handle null/undefined errors
+  if (!err) {
+    const response: ApiResponse = {
+      success: false,
+      message
+    };
+
+    res.status(statusCode).json(response);
+    return;
+  }
+
   // MongoDB validation error
   if (err.name === 'ValidationError') {
     statusCode = 400;

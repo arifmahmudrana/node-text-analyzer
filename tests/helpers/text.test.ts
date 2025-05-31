@@ -1,4 +1,4 @@
-import { countWords, countCharacters, countSentences, countParagraphs } from '../../src/helpers/text';
+import { countWords, countCharacters, countSentences, countParagraphs, getLongestWordsInParagraphs } from '../../src/helpers/text';
 
 describe('countWords', () => {
   test('should return 0 for empty string', () => {
@@ -288,5 +288,94 @@ describe('countParagraphs', () => {
       Fourth paragraph ends the text.
     `;
     expect(countParagraphs(complexText)).toBe(4);
+  });
+});
+
+describe('getLongestWordsInParagraphs', () => {
+  test('should return empty array for empty string', () => {
+    expect(getLongestWordsInParagraphs('')).toEqual([]);
+  });
+
+  test('should return empty array for string with only whitespace', () => {
+    expect(getLongestWordsInParagraphs('   ')).toEqual([]);
+    expect(getLongestWordsInParagraphs('\n\n\n')).toEqual([]);
+  });
+
+  test('should return longest word for single paragraph', () => {
+    expect(getLongestWordsInParagraphs('Hello world')).toEqual(['hello']);
+    expect(getLongestWordsInParagraphs('This is a test')).toEqual(['this']);
+    expect(getLongestWordsInParagraphs('Short word')).toEqual(['short']);
+  });
+
+  test('should return longest word when all words are same length', () => {
+    expect(getLongestWordsInParagraphs('cat dog fox')).toEqual(['cat']); // First one wins
+    expect(getLongestWordsInParagraphs('one two six')).toEqual(['one']); // First one wins
+  });
+
+  test('should handle single word paragraph', () => {
+    expect(getLongestWordsInParagraphs('Hello')).toEqual(['hello']);
+    expect(getLongestWordsInParagraphs('Programming')).toEqual(['programming']);
+  });
+
+  test('should return longest words for multiple paragraphs', () => {
+    const text = 'This is short.\n\nThis paragraph has longer words.';
+    expect(getLongestWordsInParagraphs(text)).toEqual(['short', 'paragraph']);
+  });
+
+  test('should handle punctuation by removing it', () => {
+    expect(getLongestWordsInParagraphs('Hello, world!')).toEqual(['hello']);
+    expect(getLongestWordsInParagraphs('Great! Excellent work.')).toEqual(['excellent']);
+  });
+
+  test('should handle mixed case by converting to lowercase', () => {
+    expect(getLongestWordsInParagraphs('HELLO world')).toEqual(['hello']);
+    expect(getLongestWordsInParagraphs('JavaScript Programming')).toEqual(['programming']);
+  });
+
+  test('should handle multiple spaces between words', () => {
+    expect(getLongestWordsInParagraphs('short    longer   word')).toEqual(['longer']);
+    expect(getLongestWordsInParagraphs('a  very   long    sentence')).toEqual(['sentence']);
+  });
+
+  test('should handle complex multi-paragraph text', () => {
+    const text = `
+      First paragraph with simple words.
+
+      Second paragraph contains extraordinary vocabulary.
+
+      Third.
+    `;
+    expect(getLongestWordsInParagraphs(text)).toEqual(['paragraph', 'extraordinary', 'third']);
+  });
+
+  test('should handle paragraphs with numbers', () => {
+    expect(getLongestWordsInParagraphs('test123 word')).toEqual(['test123']);
+    expect(getLongestWordsInParagraphs('number1 longer2')).toEqual(['number1']);
+  });
+
+  test('should handle empty paragraphs between content', () => {
+    const text = 'First paragraph.\n\n\n\nSecond paragraph with longer words.';
+    expect(getLongestWordsInParagraphs(text)).toEqual(['paragraph', 'paragraph']);
+  });
+
+  test('should handle paragraphs with only punctuation', () => {
+    const text = 'Normal words.\n\n!!!\n\nMore normal text.';
+    expect(getLongestWordsInParagraphs(text)).toEqual(['normal', '', 'normal']);
+  });
+
+  test('should handle real-world example', () => {
+    const text = `
+      JavaScript is a programming language.
+
+      TypeScript extends JavaScript with type definitions.
+
+      Both are popular.
+    `;
+    expect(getLongestWordsInParagraphs(text)).toEqual(['programming', 'definitions', 'popular']);
+  });
+
+  test('should handle single newlines within paragraph', () => {
+    const text = 'This is one\nparagraph with\nmultiple lines.\n\nThis is another paragraph.';
+    expect(getLongestWordsInParagraphs(text)).toEqual(['paragraph', 'paragraph']);
   });
 });

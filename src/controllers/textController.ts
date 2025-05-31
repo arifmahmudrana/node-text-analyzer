@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Text from '../models/Text';
 import { ApiResponse, TextDocument } from '../types';
 import mongoose from 'mongoose';
+import { textProcessor } from '../events/textProcessor';
 
 export interface ITextDocument {
   _id: mongoose.Types.ObjectId;
@@ -25,6 +26,9 @@ export const createText = async (
     const textData: Partial<TextDocument> = req.body;
     const text = new Text(textData);
     await text.save();
+
+    // Emit event for async text processing
+    textProcessor.emitTextCreated(text._id, text.text);
 
     const response: ApiResponse<ITextDocument> = {
       success: true,

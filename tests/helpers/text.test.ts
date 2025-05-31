@@ -1,4 +1,4 @@
-import { countWords, countCharacters, countSentences } from '../../src/helpers/text';
+import { countWords, countCharacters, countSentences, countParagraphs } from '../../src/helpers/text';
 
 describe('countWords', () => {
   test('should return 0 for empty string', () => {
@@ -215,5 +215,78 @@ describe('countSentences', () => {
   test('should handle long paragraphs', () => {
     const paragraph = 'This is the first sentence. This is the second sentence! Is this the third? Yes, it is.';
     expect(countSentences(paragraph)).toBe(4);
+  });
+});
+
+describe('countParagraphs', () => {
+  test('should return 0 for empty string', () => {
+    expect(countParagraphs('')).toBe(0);
+  });
+
+  test('should return 0 for string with only whitespace', () => {
+    expect(countParagraphs('   ')).toBe(0);
+    expect(countParagraphs('\n\n\n')).toBe(0);
+    expect(countParagraphs('\t\n  \n\t')).toBe(0);
+  });
+
+  test('should return 1 for single paragraph', () => {
+    expect(countParagraphs('This is a single paragraph.')).toBe(1);
+    expect(countParagraphs('Hello world')).toBe(1);
+  });
+
+  test('should return 1 for single paragraph with single newlines', () => {
+    expect(countParagraphs('Line one\nLine two\nLine three')).toBe(1);
+    expect(countParagraphs('First line.\nSecond line!')).toBe(1);
+  });
+
+  test('should count paragraphs separated by double newlines', () => {
+    expect(countParagraphs('First paragraph.\n\nSecond paragraph.')).toBe(2);
+    expect(countParagraphs('Para one.\n\nPara two.\n\nPara three.')).toBe(3);
+  });
+
+  test('should handle multiple empty lines between paragraphs', () => {
+    expect(countParagraphs('First paragraph.\n\n\nSecond paragraph.')).toBe(2);
+    expect(countParagraphs('One.\n\n\n\nTwo.')).toBe(2);
+  });
+
+  test('should handle paragraphs with spaces and tabs between newlines', () => {
+    expect(countParagraphs('First paragraph.\n \nSecond paragraph.')).toBe(2);
+    expect(countParagraphs('Para one.\n\t\nPara two.')).toBe(2);
+    expect(countParagraphs('One.\n  \t  \nTwo.')).toBe(2);
+  });
+
+  test('should ignore leading and trailing empty lines', () => {
+    expect(countParagraphs('\n\nFirst paragraph.\n\n')).toBe(1);
+    expect(countParagraphs('\n\nPara one.\n\nPara two.\n\n')).toBe(2);
+  });
+
+  test('should handle mixed content', () => {
+    const text = 'First paragraph with multiple sentences. This is still the first paragraph.\n\nSecond paragraph here!\n\nThird paragraph.';
+    expect(countParagraphs(text)).toBe(3);
+  });
+
+  test('should handle paragraphs with different line endings', () => {
+    expect(countParagraphs('First.\n\nSecond.')).toBe(2);
+    expect(countParagraphs('First.\r\n\r\nSecond.')).toBe(2);
+  });
+
+  test('should handle single lines as one paragraph', () => {
+    expect(countParagraphs('Just one line of text here.')).toBe(1);
+    expect(countParagraphs('No newlines at all')).toBe(1);
+  });
+
+  test('should handle complex paragraph structures', () => {
+    const complexText = `
+      First paragraph starts here.
+      It continues on the next line.
+
+      This is the second paragraph.
+      It also has multiple lines.
+
+      Third paragraph is short.
+
+      Fourth paragraph ends the text.
+    `;
+    expect(countParagraphs(complexText)).toBe(4);
   });
 });

@@ -41,5 +41,9 @@
   "engines": {
     "node": ">=22"
   },
-  "engineStrict": true
+  "engineStrict": true,
+  "dependencies": {
+    "joi": "^17.13.3",
+    "mongoose": "^8.15.1"
+  }
 }

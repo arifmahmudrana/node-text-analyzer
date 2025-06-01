@@ -1,376 +1,338 @@
 import { Request, Response, NextFunction } from 'express';
+import { createText, getTextById, ITextDocument } from '../../src/controllers/textController';
+import Text from '../../src/models/Text';
+import { textProcessor } from '../../src/events/textProcessor';
 import mongoose from 'mongoose';
-import { ITextDocument, createText } from '../../src/controllers/textController';
 import { ApiResponse } from '../../src/types';
 
-// Mock the Text model
+// Mock dependencies
 jest.mock('../../src/models/Text');
-import Text from '../../src/models/Text';
-const MockedText = Text as jest.MockedClass<typeof Text>;
+jest.mock('../../src/events/textProcessor');
 
-// Mock Express objects
-const mockRequest = (body: any = {}): Partial<Request> => ({
-  body
-});
+describe('Text Controller', () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+  let mockNext: NextFunction;
+  let mockJson: jest.Mock;
+  let mockStatus: jest.Mock;
 
-const mockResponse = (): Partial<Response> => {
-  const res: Partial<Response> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  return res;
-};
-
-const mockNext: NextFunction = jest.fn();
-
-describe('createText controller', () => {
   beforeEach(() => {
+    mockJson = jest.fn();
+    mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+    
+    mockRequest = {};
+    mockResponse = {
+      status: mockStatus,
+      json: mockJson,
+    };
+    mockNext = jest.fn();
+    
     jest.clearAllMocks();
   });
 
-  describe('successful text creation', () => {
-    it('should create text and return 201 status with success response', async () => {
-      const textData = {
-        text: 'This is a sample text for testing.',
-        done: false
-      };
+  describe('createText', () => {
+    const mockTextData = {
+      text: 'This is a sample text for testing purposes.',
+    };
 
-      const mockTextDocument: ITextDocument = {
+    const mockSavedText = {
+      _id: new mongoose.Types.ObjectId(),
+      text: mockTextData.text,
+      done: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      save: jest.fn().mockResolvedValue(true),
+      toObject: jest.fn().mockReturnValue({
         _id: new mongoose.Types.ObjectId(),
-        text: 'This is a sample text for testing.',
+        text: mockTextData.text,
         done: false,
-        numberOfWords: 7,
-        numberOfCharacters: 34,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    };
+
+    beforeEach(() => {
+      mockRequest.body = mockTextData;
+      (Text as jest.MockedClass<typeof Text>).mockImplementation(() => mockSavedText as any);
+    });
+
+    it('should create text successfully', async () => {
+      const mockEmitTextCreated = jest.fn();
+      (textProcessor.emitTextCreated as jest.Mock) = mockEmitTextCreated;
+
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text).toHaveBeenCalledWith(mockTextData);
+      expect(mockSavedText.save).toHaveBeenCalled();
+      expect(mockEmitTextCreated).toHaveBeenCalledWith(mockSavedText._id, mockSavedText.text);
+      expect(mockStatus).toHaveBeenCalledWith(201);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: true,
+        data: mockSavedText.toObject(),
+        message: 'Text created successfully',
+      });
+    });
+
+    it('should handle database save errors', async () => {
+      const error = new Error('Database save failed');
+      mockSavedText.save.mockRejectedValue(error);
+
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockJson).not.toHaveBeenCalled();
+    });
+
+    it('should handle Text model instantiation errors', async () => {
+      const error = new Error('Model instantiation failed');
+      (Text as jest.MockedClass<typeof Text>).mockImplementation(() => {
+        throw error;
+      });
+
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockJson).not.toHaveBeenCalled();
+    });
+
+    it('should not emit text processing event if save fails', async () => {
+      const error = new Error('Database save failed');
+      mockSavedText.save.mockRejectedValue(error);
+      const mockEmitTextCreated = jest.fn();
+      (textProcessor.emitTextCreated as jest.Mock) = mockEmitTextCreated;
+
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockEmitTextCreated).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getTextById', () => {
+    const validObjectId = new mongoose.Types.ObjectId().toString();
+    const mockTextDocument = {
+      _id: new mongoose.Types.ObjectId(validObjectId),
+      text: 'Sample processed text',
+      done: true,
+      numberOfWords: 3,
+      numberOfCharacters: 21,
+      numberOfSentences: 1,
+      numberOfParagraphs: 1,
+      longestWordsInParagraphs: ['processed'],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      toObject: jest.fn().mockReturnValue({
+        _id: new mongoose.Types.ObjectId(validObjectId),
+        text: 'Sample processed text',
+        done: true,
+        numberOfWords: 3,
+        numberOfCharacters: 21,
         numberOfSentences: 1,
         numberOfParagraphs: 1,
-        longestWordsInParagraphs: ['testing'],
+        longestWordsInParagraphs: ['processed'],
         createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        updatedAt: new Date(),
+      }),
+    };
 
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith(textData);
-      expect(mockTextInstance.save).toHaveBeenCalledTimes(1);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockTextDocument,
-        message: 'Text created successfully'
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+    beforeEach(() => {
+      mockRequest.params = { id: validObjectId };
     });
 
-    it('should handle partial text data', async () => {
-      const partialTextData = {
-        text: 'Minimal text',
-        done: true
-      };
+    it('should return text document when found and done is true', async () => {
+      (Text.findOne as jest.Mock).mockResolvedValue(mockTextDocument);
 
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        text: 'Minimal text',
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.findOne).toHaveBeenCalledWith({
+        _id: validObjectId,
         done: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(partialTextData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith(partialTextData);
-      expect(mockTextInstance.save).toHaveBeenCalledTimes(1);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({
+      });
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        data: mockTextDocument,
-        message: 'Text created successfully'
+        data: mockTextDocument.toObject(),
+        message: 'Text retrieved successfully',
       });
     });
 
-    it('should handle text with all optional fields', async () => {
-      const completeTextData = {
-        text: 'Complete text with all fields. This has multiple sentences.',
-        done: false,
-        numberOfWords: 10,
-        numberOfCharacters: 58,
-        numberOfSentences: 2,
-        numberOfParagraphs: 1,
-        longestWordsInParagraphs: ['sentences']
-      };
+    it('should return 404 when text document is not found', async () => {
+      (Text.findOne as jest.Mock).mockResolvedValue(null);
 
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        ...completeTextData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
 
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(completeTextData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith(completeTextData);
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockTextDocument,
-        message: 'Text created successfully'
+      expect(Text.findOne).toHaveBeenCalledWith({
+        _id: validObjectId,
+        done: true,
+      });
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Text not found',
       });
     });
+
+    it('should return 404 when text document exists but done is false', async () => {
+      // Mock finding a document that exists but done is false
+      (Text.findOne as jest.Mock).mockResolvedValue(null);
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.findOne).toHaveBeenCalledWith({
+        _id: validObjectId,
+        done: true,
+      });
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Text not found',
+      });
+    });
+
+    it('should return 404 for invalid ObjectId format', async () => {
+      mockRequest.params = { id: 'invalid-object-id' };
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.findOne).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Text not found',
+      });
+    });
+
+    it('should return 404 for empty id', async () => {
+      mockRequest.params = { id: '' };
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.findOne).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Text not found',
+      });
+    });
+
+    it('should return 404 for undefined id', async () => {
+      mockRequest.params = {};
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.findOne).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Text not found',
+      });
+    });
+
+    it('should handle database query errors', async () => {
+      const error = new Error('Database query failed');
+      (Text.findOne as jest.Mock).mockRejectedValue(error);
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockJson).not.toHaveBeenCalled();
+    });
+
+    it('should call toObject() on the found document', async () => {
+      (Text.findOne as jest.Mock).mockResolvedValue(mockTextDocument);
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockTextDocument.toObject).toHaveBeenCalled();
+    });
   });
 
-  describe('error handling', () => {
-    it('should call next with error when Text.save() fails', async () => {
-      const textData = {
-        text: 'This will fail to save',
-        done: false
-      };
-
-      const saveError = new Error('Database connection failed');
-      const mockTextInstance = {
-        save: jest.fn().mockRejectedValue(saveError),
-        toObject: jest.fn()
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith(textData);
-      expect(mockTextInstance.save).toHaveBeenCalledTimes(1);
-      expect(mockNext).toHaveBeenCalledWith(saveError);
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).not.toHaveBeenCalled();
-    });
-
-    it('should call next with MongoDB validation error', async () => {
-      const textData = {
-        text: '', // invalid - empty text
-        done: false
-      };
-
-      const validationError = {
-        name: 'ValidationError',
-        errors: {
-          text: {
-            path: 'text',
-            message: 'Text is required'
-          }
-        }
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockRejectedValue(validationError),
-        toObject: jest.fn()
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(validationError);
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).not.toHaveBeenCalled();
-    });
-
-    it('should call next with MongoDB duplicate key error', async () => {
-      const textData = {
-        text: 'Duplicate text content',
-        done: false
-      };
-
-      const duplicateError = {
-        code: 11000,
-        keyPattern: { text: 1 }
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockRejectedValue(duplicateError),
-        toObject: jest.fn()
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(duplicateError);
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).not.toHaveBeenCalled();
-    });
-
-    it('should handle Text constructor throwing error', async () => {
-      const textData = {
-        text: 'This will cause constructor error',
-        done: false
-      };
-
-      const constructorError = new Error('Invalid data format');
-      MockedText.mockImplementation(() => {
-        throw constructorError;
+  describe('Edge Cases', () => {
+    it('should handle missing request body in createText', async () => {
+      mockRequest.body = undefined;
+      const error = new Error('Request body is required');
+      (Text as jest.MockedClass<typeof Text>).mockImplementation(() => {
+        throw error;
       });
 
-      const req = mockRequest(textData);
-      const res = mockResponse();
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
 
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(constructorError);
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle empty request body', async () => {
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        text: '',
-        done: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest({});
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith({});
-      expect(mockTextInstance.save).toHaveBeenCalledTimes(1);
-      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
 
-    it('should handle null request body', async () => {
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        text: '',
-        done: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(null);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(MockedText).toHaveBeenCalledWith(null);
-      expect(mockTextInstance.save).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('response structure', () => {
-    it('should return response with correct ApiResponse structure', async () => {
-      const textData = {
-        text: 'Test response structure',
-        done: false
-      };
-
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        text: 'Test response structure',
-        done: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      const response = (res.json as jest.Mock).mock.calls[0][0] as ApiResponse<ITextDocument>;
+    it('should handle database errors during ObjectId query', async () => {
+      // Use a valid ObjectId format that could still cause database errors
+      const validObjectId = new mongoose.Types.ObjectId().toString();
+      mockRequest.params = { id: validObjectId };
       
-      expect(response).toHaveProperty('success', true);
-      expect(response).toHaveProperty('data');
-      expect(response).toHaveProperty('message', 'Text created successfully');
-      expect(response.data).toEqual(mockTextDocument);
+      const error = new Error('Database connection failed');
+      (Text.findOne as jest.Mock).mockRejectedValue(error);
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('Response Structure Validation', () => {
+    it('should return properly structured ApiResponse for successful createText', async () => {
+      const mockTextData = { text: 'Test text' };
+      mockRequest.body = mockTextData;
+
+      const mockSavedText = {
+        _id: new mongoose.Types.ObjectId(),
+        text: mockTextData.text,
+        done: false,
+        save: jest.fn().mockResolvedValue(true),
+        toObject: jest.fn().mockReturnValue({
+          _id: new mongoose.Types.ObjectId(),
+          text: mockTextData.text,
+          done: false,
+        }),
+      };
+
+      (Text as jest.MockedClass<typeof Text>).mockImplementation(() => mockSavedText as any);
+      (textProcessor.emitTextCreated as jest.Mock) = jest.fn();
+
+      await createText(mockRequest as Request, mockResponse as Response, mockNext);
+
+      const expectedResponse: ApiResponse<ITextDocument> = {
+        success: true,
+        data: mockSavedText.toObject(),
+        message: 'Text created successfully',
+      };
+
+      expect(mockJson).toHaveBeenCalledWith(expectedResponse);
     });
 
-    it('should call toObject() to serialize document', async () => {
-      const textData = {
-        text: 'Test toObject call',
-        done: false
+    it('should return properly structured ApiResponse for successful getTextById', async () => {
+      const validObjectId = new mongoose.Types.ObjectId().toString();
+      mockRequest.params = { id: validObjectId };
+
+      const mockTextDocument = {
+        _id: new mongoose.Types.ObjectId(validObjectId),
+        text: 'Test text',
+        done: true,
+        toObject: jest.fn().mockReturnValue({
+          _id: new mongoose.Types.ObjectId(validObjectId),
+          text: 'Test text',
+          done: true,
+        }),
       };
 
-      const mockTextDocument: ITextDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        text: 'Test toObject call',
-        done: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      (Text.findOne as jest.Mock).mockResolvedValue(mockTextDocument);
+
+      await getTextById(mockRequest as Request, mockResponse as Response, mockNext);
+
+      const expectedResponse: ApiResponse<ITextDocument> = {
+        success: true,
+        data: mockTextDocument.toObject(),
+        message: 'Text retrieved successfully',
       };
 
-      const mockTextInstance = {
-        save: jest.fn().mockResolvedValue(mockTextDocument),
-        toObject: jest.fn().mockReturnValue(mockTextDocument)
-      };
-
-      MockedText.mockImplementation(() => mockTextInstance as any);
-
-      const req = mockRequest(textData);
-      const res = mockResponse();
-
-      await createText(req as Request, res as Response, mockNext);
-
-      expect(mockTextInstance.toObject).toHaveBeenCalledTimes(1);
+      expect(mockJson).toHaveBeenCalledWith(expectedResponse);
     });
   });
 });

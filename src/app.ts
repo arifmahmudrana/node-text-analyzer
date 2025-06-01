@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import textRoutes from './routes/textRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { ApiResponse } from './types';
@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/texts', textRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   const response: ApiResponse = {
     success: true,
     message: 'API is running successfully',
@@ -21,6 +21,7 @@ app.get('/health', (req, res) => {
       environment: process.env.NODE_ENV || 'development'
     }
   };
+  
   res.json(response);
 });
 

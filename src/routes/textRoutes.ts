@@ -14,8 +14,8 @@ const listTextsPaginationMiddleware = createPaginationMiddleware({
 });
 
 // Routes
-router.post('/texts', createText); // Create a new text
-router.get('/texts/:id', getTextById); // Get text by ID (only returns texts where done: true)
-router.get('/texts', listTextsPaginationMiddleware, listTexts);
+router.post('/', createText); // Create a new text
+router.get('/:id', getTextById); // Get text by ID (only returns texts where done: true)
+router.get('/', listTextsPaginationMiddleware, listTexts);
 
 export default router;

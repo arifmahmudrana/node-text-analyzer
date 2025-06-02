@@ -6,10 +6,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:log": "npm run build && npm start 2>&1 | tee -a logs/app.log",
-    "start:prod": "NODE_ENV=production npm start 2>&1 | tee -a logs/app.log",
+    "start:log": "npm run build && npm start 2>&1 | tee -a logs/app-prod.log",
+    "start:prod": "NODE_ENV=production npm start 2>&1 | tee -a logs/app-prod.log",
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts",
-    "dev:log": "npm run dev 2>&1 | tee -a logs/app.log",
+    "dev:log": "npm run dev 2>&1 | tee -a logs/app-dev.log",
     "lint": "eslint 'src/**/*.ts'",
     "test": "jest",
     "test:watch": "jest --watch"

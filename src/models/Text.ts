@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 import { TextDocument } from '../types';
 
 const TextSchema = new Schema<TextDocument>({

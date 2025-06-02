@@ -1,14 +1,21 @@
 import { Router } from 'express';
-import { validateRequest } from '../middlewares/validation';
-import { createTextSchema } from '../validations/textValidation';
-import { createText, getTextById } from '../controllers/textController';
+import { createText, getTextById, listTexts } from '../controllers/textController';
+import { createPaginationMiddleware } from '../middlewares/pagination';
 
 const router = Router();
 
-// Create a new text
-router.post('/', validateRequest(createTextSchema), createText);
+// Pagination middleware configuration for listTexts
+const listTextsPaginationMiddleware = createPaginationMiddleware({
+  allowedOrderByFields: ['createdAt', 'updatedAt'],
+  defaultLimit: 10,
+  maxLimit: 100,
+  defaultOrder: 'desc',
+  defaultOrderBy: ['createdAt']
+});
 
-// Get text by ID (only returns texts where done: true)
-router.get('/:id', getTextById);
+// Routes
+router.post('/texts', createText); // Create a new text
+router.get('/texts/:id', getTextById); // Get text by ID (only returns texts where done: true)
+router.get('/texts', listTextsPaginationMiddleware, listTexts);
 
 export default router;

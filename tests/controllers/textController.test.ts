@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { createText, getTextById, ITextDocument } from '../../src/controllers/textController';
+import { createText, getTextById, listTexts, ITextDocument } from '../../src/controllers/textController';
 import Text from '../../src/models/Text';
 import { textProcessor } from '../../src/events/textProcessor';
+import { createPaginationMeta } from '../../src/middlewares/pagination';
 import mongoose from 'mongoose';
 import { ApiResponse } from '../../src/types';
 
 // Mock dependencies
 jest.mock('../../src/models/Text');
 jest.mock('../../src/events/textProcessor');
+jest.mock('../../src/middlewares/pagination');
 
 describe('Text Controller', () => {
   let mockRequest: Partial<Request>;
@@ -249,6 +251,291 @@ describe('Text Controller', () => {
     });
   });
 
+  describe('listTexts', () => {
+    const mockTexts = [
+      {
+        _id: new mongoose.Types.ObjectId(),
+        text: 'First text',
+        done: true,
+        numberOfWords: 2,
+        numberOfCharacters: 10,
+        createdAt: new Date('2023-01-01'),
+        updatedAt: new Date('2023-01-01'),
+      },
+      {
+        _id: new mongoose.Types.ObjectId(),
+        text: 'Second text',
+        done: false,
+        numberOfWords: 2,
+        numberOfCharacters: 11,
+        createdAt: new Date('2023-01-02'),
+        updatedAt: new Date('2023-01-02'),
+      },
+    ];
+
+    const mockPagination = {
+      page: 1,
+      limit: 10,
+      offset: 0,
+      orderBy: ['createdAt'],
+      order: 'desc' as const,
+    };
+
+    const mockPaginationMeta = {
+      currentPage: 1,
+      totalPages: 1,
+      totalCount: 2,
+      limit: 10,
+      hasNextPage: false,
+      hasPrevPage: false,
+      nextPage: null,
+      prevPage: null,
+    };
+
+    beforeEach(() => {
+      mockRequest.query = {};
+      mockRequest.pagination = mockPagination;
+      
+      // Mock Text methods
+      (Text.countDocuments as jest.Mock).mockResolvedValue(2);
+      (Text.find as jest.Mock).mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      });
+      
+      (createPaginationMeta as jest.Mock).mockReturnValue(mockPaginationMeta);
+    });
+
+    it('should list all texts successfully with default parameters', async () => {
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.countDocuments).toHaveBeenCalledWith({});
+      expect(Text.find).toHaveBeenCalledWith({});
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: true,
+        data: mockTexts,
+        message: 'Texts retrieved successfully',
+        meta: mockPaginationMeta,
+      });
+    });
+
+    it('should filter texts by done=true', async () => {
+      mockRequest.query = { done: 'true' };
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.countDocuments).toHaveBeenCalledWith({ done: true });
+      expect(Text.find).toHaveBeenCalledWith({ done: true });
+    });
+
+    it('should filter texts by done=false', async () => {
+      mockRequest.query = { done: 'false' };
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.countDocuments).toHaveBeenCalledWith({ done: false });
+      expect(Text.find).toHaveBeenCalledWith({ done: false });
+    });
+
+    it('should not filter when done=all', async () => {
+      mockRequest.query = { done: 'all' };
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.countDocuments).toHaveBeenCalledWith({});
+      expect(Text.find).toHaveBeenCalledWith({});
+    });
+
+    it('should apply correct sorting for desc order', async () => {
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(mockFind.skip).toHaveBeenCalledWith(0);
+      expect(mockFind.limit).toHaveBeenCalledWith(10);
+      expect(mockFind.lean).toHaveBeenCalled();
+    });
+
+    it('should apply correct sorting for asc order', async () => {
+      mockRequest.pagination = {
+        ...mockPagination,
+        order: 'asc' as const,
+      };
+
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: 1 });
+    });
+
+    it('should apply pagination parameters correctly', async () => {
+      mockRequest.pagination = {
+        ...mockPagination,
+        page: 2,
+        limit: 5,
+        offset: 5,
+      };
+
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockFind.skip).toHaveBeenCalledWith(5);
+      expect(mockFind.limit).toHaveBeenCalledWith(5);
+      expect(createPaginationMeta).toHaveBeenCalledWith(2, 5, 2);
+    });
+
+    it('should handle different sort fields', async () => {
+      mockRequest.pagination = {
+        ...mockPagination,
+        orderBy: ['updatedAt'],
+      };
+
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockFind.sort).toHaveBeenCalledWith({ updatedAt: -1 });
+    });
+
+    it('should return 500 when pagination middleware is not configured', async () => {
+      mockRequest.pagination = undefined;
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: 'Pagination middleware not configured',
+      });
+      expect(Text.countDocuments).not.toHaveBeenCalled();
+      expect(Text.find).not.toHaveBeenCalled();
+    });
+
+    it('should handle countDocuments database errors', async () => {
+      const error = new Error('Database count failed');
+      (Text.countDocuments as jest.Mock).mockRejectedValue(error);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockJson).not.toHaveBeenCalled();
+    });
+
+    it('should handle find database errors', async () => {
+      const error = new Error('Database find failed');
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockRejectedValue(error),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockJson).not.toHaveBeenCalled();
+    });
+
+    it('should return empty array when no texts found', async () => {
+      (Text.countDocuments as jest.Mock).mockResolvedValue(0);
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([]),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      const emptyPaginationMeta = {
+        ...mockPaginationMeta,
+        totalCount: 0,
+        totalPages: 0,
+      };
+      (createPaginationMeta as jest.Mock).mockReturnValue(emptyPaginationMeta);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: true,
+        data: [],
+        message: 'Texts retrieved successfully',
+        meta: emptyPaginationMeta,
+      });
+    });
+
+    it('should create pagination metadata with correct parameters', async () => {
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(createPaginationMeta).toHaveBeenCalledWith(
+        mockPagination.page,
+        mockPagination.limit,
+        2 // totalCount
+      );
+    });
+
+    it('should combine filtering and pagination correctly', async () => {
+      mockRequest.query = { done: 'true' };
+      mockRequest.pagination = {
+        ...mockPagination,
+        page: 2,
+        limit: 3,
+        offset: 3,
+      };
+
+      const filteredTexts = [mockTexts[0]]; // Only the done: true text
+      (Text.countDocuments as jest.Mock).mockResolvedValue(1);
+      const mockFind = {
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(filteredTexts),
+      };
+      (Text.find as jest.Mock).mockReturnValue(mockFind);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(Text.countDocuments).toHaveBeenCalledWith({ done: true });
+      expect(Text.find).toHaveBeenCalledWith({ done: true });
+      expect(mockFind.skip).toHaveBeenCalledWith(3);
+      expect(mockFind.limit).toHaveBeenCalledWith(3);
+      expect(createPaginationMeta).toHaveBeenCalledWith(2, 3, 1);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle missing request body in createText', async () => {
       mockRequest.body = undefined;
@@ -330,6 +617,56 @@ describe('Text Controller', () => {
         success: true,
         data: mockTextDocument.toObject(),
         message: 'Text retrieved successfully',
+      };
+
+      expect(mockJson).toHaveBeenCalledWith(expectedResponse);
+    });
+
+    it('should return properly structured ApiResponse for successful listTexts', async () => {
+      mockRequest.query = {};
+      const mockTexts = [
+        {
+          _id: new mongoose.Types.ObjectId(),
+          text: 'Test text',
+          done: true,
+        },
+      ];
+
+      const mockPaginationMeta = {
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 1,
+        limit: 10,
+        hasNextPage: false,
+        hasPrevPage: false,
+        nextPage: null,
+        prevPage: null,
+      };
+
+      mockRequest.pagination = {
+        page: 1,
+        limit: 10,
+        offset: 0,
+        orderBy: ['createdAt'],
+        order: 'desc' as const,
+      };
+
+      (Text.countDocuments as jest.Mock).mockResolvedValue(1);
+      (Text.find as jest.Mock).mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockTexts),
+      });
+      (createPaginationMeta as jest.Mock).mockReturnValue(mockPaginationMeta);
+
+      await listTexts(mockRequest as Request, mockResponse as Response, mockNext);
+
+      const expectedResponse: ApiResponse<ITextDocument[]> = {
+        success: true,
+        data: mockTexts,
+        message: 'Texts retrieved successfully',
+        meta: mockPaginationMeta,
       };
 
       expect(mockJson).toHaveBeenCalledWith(expectedResponse);

@@ -119,7 +119,7 @@ npm run start:prod
 Start the complete monitoring stack with Docker Compose:
 
 ```bash
-docker-compose up -d
+docker-compose up --build
 ```
 
 This will start:

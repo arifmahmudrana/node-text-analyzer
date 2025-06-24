@@ -15,7 +15,7 @@ export interface TextProcessingData {
 }
 
 class TextProcessor extends EventEmitter {
-  private isShuttingDown = false;
+  public isShuttingDown = false;
 
   constructor() {
     super();
@@ -43,6 +43,12 @@ class TextProcessor extends EventEmitter {
       const numberOfParagraphs = countParagraphs(data.text);
       const longestWordsInParagraphs = getLongestWordsInParagraphs(data.text);
 
+      // Check if shutting down before database operation
+      if (this.isShuttingDown) {
+        console.log('Aborting text processing due to shutdown');
+        return;
+      }
+
       // Update the document in the database
       await Text.findByIdAndUpdate(
         data.textId,
@@ -59,8 +65,10 @@ class TextProcessor extends EventEmitter {
 
       console.log(`Text analysis completed for ID: ${data.textId}`);
     } catch (error) {
-      // Log error but silently discard it
-      console.error(`Error processing text analysis for ID: ${data.textId}`, error);
+      // Only log error if not shutting down to avoid Jest teardown issues
+      if (!this.isShuttingDown) {
+        console.error(`Error processing text analysis for ID: ${data.textId}`, error);
+      }
     }
   }
 
@@ -72,8 +80,11 @@ class TextProcessor extends EventEmitter {
       console.log('Text processor shutdown complete');
     };
 
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
+    // Don't set up process listeners in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+    }
   }
 
   public emitTextCreated(textId: mongoose.Types.ObjectId, text: string) {

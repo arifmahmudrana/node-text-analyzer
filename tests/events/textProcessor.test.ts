@@ -1,9 +1,12 @@
-// TODO: undefined ID calling don't know why it's double calling
-
 import mongoose from 'mongoose';
 import { textProcessor } from '../../src/events/textProcessor';
 import Text from '../../src/models/Text';
 import * as textHelpers from '../../src/helpers/text';
+
+// Mock the entire Text model to prevent any database operations
+jest.mock('../../src/models/Text', () => ({
+  findByIdAndUpdate: jest.fn().mockResolvedValue({})
+}));
 
 describe('TextProcessor', () => {
   const mockTextId = new mongoose.Types.ObjectId();
@@ -13,13 +16,27 @@ describe('TextProcessor', () => {
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Reset the shutdown state
+    (textProcessor as any).isShuttingDown = false;
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('should process text analysis and update the document', async () => {
+  afterAll(async () => {
+    // Ensure the processor is shut down and all listeners are removed
+    (textProcessor as any).isShuttingDown = true;
+    textProcessor.removeAllListeners();
+    
+    // Wait for any pending operations to complete
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    jest.restoreAllMocks();
+  });
+
+  it('should process text analysis when event is emitted and update the document', async () => {
     jest.spyOn(textHelpers, 'countWords').mockReturnValue(6);
     jest.spyOn(textHelpers, 'countCharacters').mockReturnValue(36);
     jest.spyOn(textHelpers, 'countSentences').mockReturnValue(2);
@@ -28,14 +45,35 @@ describe('TextProcessor', () => {
       'Hello',
       'paragraph'
     ]);
-    const updateMock = jest.spyOn(Text, 'findByIdAndUpdate').mockResolvedValue({} as any);
-    await (textProcessor as any).processTextAnalysis({ textId: mockTextId, text: mockText });
+    const mockFindByIdAndUpdate = Text.findByIdAndUpdate as jest.Mock;
+    
+    // Create a promise to track when the async processing is done
+    let resolveProcessing: () => void;
+    const processingDone = new Promise<void>((resolve) => {
+      resolveProcessing = resolve;
+    });
+
+    // Override the mock to resolve our promise when called
+    mockFindByIdAndUpdate.mockImplementation(async (...args) => {
+      // Simulate async database operation
+      await new Promise(resolve => setTimeout(resolve, 10));
+      resolveProcessing();
+      return { _id: mockTextId, done: true };
+    });
+
+    // Emit the event
+    textProcessor.emitTextCreated(mockTextId, mockText);
+
+    // Wait for the async processing to complete
+    await processingDone;
+
     expect(textHelpers.countWords).toHaveBeenCalledWith(mockText);
     expect(textHelpers.countCharacters).toHaveBeenCalledWith(mockText);
     expect(textHelpers.countSentences).toHaveBeenCalledWith(mockText);
     expect(textHelpers.countParagraphs).toHaveBeenCalledWith(mockText);
     expect(textHelpers.getLongestWordsInParagraphs).toHaveBeenCalledWith(mockText);
-    expect(updateMock).toHaveBeenCalledWith(
+    // Verify the database update was called
+    expect(mockFindByIdAndUpdate).toHaveBeenCalledWith(
       mockTextId,
       expect.objectContaining({
         numberOfWords: 6,
@@ -50,11 +88,16 @@ describe('TextProcessor', () => {
   });
 
   it('should not process text if shutting down', async () => {
+    // Set shutdown state
     (textProcessor as any).isShuttingDown = true;
     const updateMock = jest.spyOn(Text, 'findByIdAndUpdate');
-    await (textProcessor as any).processTextAnalysis({ textId: mockTextId, text: mockText });
+    
+    const spy = jest.spyOn(textProcessor, 'emit');
+    textProcessor.emitTextCreated(mockTextId, mockText);
+    
+    // Should not emit when shutting down
+    expect(spy).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
-    (textProcessor as any).isShuttingDown = false;
   });
 
   it('should emit text:created event and call processTextAnalysis', () => {

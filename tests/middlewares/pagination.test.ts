@@ -188,6 +188,24 @@ describe('Pagination Middleware', () => {
 
       expect(req.pagination!.order).toBe('asc');
     });
+
+    test('should handle ascending order when default is descending', () => {
+      const customOptions = {
+        allowedOrderByFields: ['id', 'name', 'email', 'createdAt'],
+        defaultLimit: 10,
+        maxLimit: 100,
+        defaultOrder: 'desc' as const, // Set default to desc
+        defaultOrderBy: ['id']
+      };
+
+      const middleware = createPaginationMiddleware(customOptions);
+      const req = mockRequest({ order: 'asc' }) as TestRequest; // Request asc order
+      const res = mockResponse();
+
+      middleware(req as Request, res as Response, mockNext);
+
+      expect(req.pagination!.order).toBe('asc'); // Should respect the requested order, not default
+    });
   });
 
   describe('Custom options', () => {

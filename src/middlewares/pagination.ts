@@ -30,7 +30,7 @@ export const createPaginationMiddleware = (options: PaginationOptions) => {
       const offset = (page - 1) * limit;
       
       // Parse order direction
-      const order = query.order === 'desc' ? 'desc' : defaultOrder;
+      const order = (query.order || defaultOrder) === 'desc' ? 'desc' : 'asc';
       
       // Parse orderBy fields
       let orderByFields: string[] = [];

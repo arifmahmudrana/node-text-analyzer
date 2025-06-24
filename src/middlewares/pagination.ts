@@ -25,7 +25,6 @@ export const createPaginationMiddleware = (options: PaginationOptions) => {
       if (isNaN(limit) || limit < 1 || limit > maxLimit) {
         limit = defaultLimit; // Default to defaultLimit if invalid
       }
-      limit = Math.min(Math.max(1, limit), maxLimit);
       
       // Calculate offset
       const offset = (page - 1) * limit;

@@ -2,11 +2,12 @@ name: Release Pipeline
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - main
 
 jobs:
   security-scan:
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     
     # add permissions at job level

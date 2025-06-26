@@ -12,8 +12,6 @@ const mockResponse = (): Partial<Response> => {
   return res;
 };
 
-const mockNext: NextFunction = jest.fn();
-
 // Mock console.error to avoid noise in test output
 const originalConsoleError = console.error;
 beforeAll(() => {
@@ -48,7 +46,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(validationError, req as Request, res as Response, mockNext);
+      errorHandler(validationError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
@@ -75,7 +73,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(validationError, req as Request, res as Response, mockNext);
+      errorHandler(validationError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
@@ -98,7 +96,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(duplicateError, req as Request, res as Response, mockNext);
+      errorHandler(duplicateError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({
@@ -119,7 +117,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(duplicateError, req as Request, res as Response, mockNext);
+      errorHandler(duplicateError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({
@@ -144,7 +142,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(castError, req as Request, res as Response, mockNext);
+      errorHandler(castError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
@@ -164,7 +162,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(castError, req as Request, res as Response, mockNext);
+      errorHandler(castError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
@@ -181,7 +179,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(genericError, req as Request, res as Response, mockNext);
+      errorHandler(genericError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
@@ -198,7 +196,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(unknownError, req as Request, res as Response, mockNext);
+      errorHandler(unknownError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
@@ -211,7 +209,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(null, req as Request, res as Response, mockNext);
+      errorHandler(null, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
@@ -226,7 +224,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(stringError, req as Request, res as Response, mockNext);
+      errorHandler(stringError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
@@ -242,7 +240,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(testError, req as Request, res as Response, mockNext);
+      errorHandler(testError, req as Request, res as Response);
 
       expect(console.error).toHaveBeenCalledWith('Error:', testError);
     });
@@ -258,7 +256,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(validationError, req as Request, res as Response, mockNext);
+      errorHandler(validationError, req as Request, res as Response);
 
       expect(console.error).toHaveBeenCalledWith('Error:', validationError);
     });
@@ -270,7 +268,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(genericError, req as Request, res as Response, mockNext);
+      errorHandler(genericError, req as Request, res as Response);
 
       const response = (res.json as jest.Mock).mock.calls[0][0] as ApiResponse;
       
@@ -292,7 +290,7 @@ describe('errorHandler middleware', () => {
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(validationError, req as Request, res as Response, mockNext);
+      errorHandler(validationError, req as Request, res as Response);
 
       const response = (res.json as jest.Mock).mock.calls[0][0] as ApiResponse;
       
@@ -312,7 +310,7 @@ describe('errorHandler middleware', () => {
         const req = mockRequest();
         const res = mockResponse();
 
-        errorHandler(error, req as Request, res as Response, mockNext);
+        errorHandler(error, req as Request, res as Response);
 
         const response = (res.json as jest.Mock).mock.calls[0][0] as ApiResponse;
         expect(response.success).toBe(false);
@@ -323,22 +321,12 @@ describe('errorHandler middleware', () => {
   });
 
   describe('middleware behavior', () => {
-    it('should not call next() after handling error', () => {
-      const testError = new Error('Test error');
-      const req = mockRequest();
-      const res = mockResponse();
-
-      errorHandler(testError, req as Request, res as Response, mockNext);
-
-      expect(mockNext).not.toHaveBeenCalled();
-    });
-
     it('should always send a response', () => {
       const testError = new Error('Test error');
       const req = mockRequest();
       const res = mockResponse();
 
-      errorHandler(testError, req as Request, res as Response, mockNext);
+      errorHandler(testError, req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalled();

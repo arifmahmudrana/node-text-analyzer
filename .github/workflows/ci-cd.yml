@@ -44,3 +44,9 @@ jobs:
       env:
         NODE_ENV: test
         MONGODB_URI: mongodb://testuser:testpass@localhost:27017/textapi-test?authSource=admin
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage/lcov.info
+        fail_ci_if_error: false

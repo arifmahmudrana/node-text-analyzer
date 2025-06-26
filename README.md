@@ -1,4 +1,4 @@
-# Text Analyzer API
+# Text Analyzer API [![codecov](https://codecov.io/gh/arifmahmudrana/node-text-analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/arifmahmudrana/node-text-analyzer)
 
 A robust Node.js/TypeScript API for analyzing text content with asynchronous processing and comprehensive monitoring capabilities.
 

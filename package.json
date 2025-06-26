@@ -28,9 +28,12 @@
   },
   "homepage": "https://github.com/arifmahmudrana/node-text-analyzer#readme",
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
     "@types/express": "^5.0.2",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.28",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
     "dotenv": "^16.5.0",
     "eslint": "^9.27.0",
     "express": "^5.1.0",

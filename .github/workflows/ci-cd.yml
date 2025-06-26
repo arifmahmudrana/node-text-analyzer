@@ -55,6 +55,7 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
+    needs: [test]
     
     # add permissions at job level
     permissions:

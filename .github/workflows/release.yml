@@ -9,6 +9,12 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     
+    # add permissions at job level
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

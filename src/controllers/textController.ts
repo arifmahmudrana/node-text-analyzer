@@ -111,7 +111,7 @@ export const listTexts = async (
     }
 
     // Build filter based on done parameter
-    let filter: any = {};
+    const filter: any = {};
     if (done === 'true') {
       filter.done = true;
     } else if (done === 'false') {

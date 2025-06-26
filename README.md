@@ -1,4 +1,4 @@
-# Text Analyzer API [![codecov](https://codecov.io/gh/arifmahmudrana/node-text-analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/arifmahmudrana/node-text-analyzer)
+# Text Analyzer API [![codecov](https://codecov.io/gh/arifmahmudrana/node-text-analyzer/branch/main/graph/badge.svg)](https://codecov.io/gh/arifmahmudrana/node-text-analyzer) [![Security](https://img.shields.io/github/actions/workflow/status/arifmahmudrana/node-text-analyzer/ci-cd.yml?branch=main&label=Tests%20and%20Scans&logo=github)](https://github.com/arifmahmudrana/node-text-analyzer/security/code-scanning)
 
 A robust Node.js/TypeScript API for analyzing text content with asynchronous processing and comprehensive monitoring capabilities.
 

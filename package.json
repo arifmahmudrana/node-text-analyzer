@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --project tsconfig.build.json",
     "start": "node dist/src/server.js",
     "start:log": "npm run build && npm start 2>&1 | tee -a logs/app-prod.log",
     "start:prod": "NODE_ENV=production npm start 2>&1 | tee -a logs/app-prod.log",

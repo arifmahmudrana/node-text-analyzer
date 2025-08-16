@@ -16,3 +16,4 @@ jest.config.js
 .vscode
 docker-compose*.yml
 Dockerfile*
+k8s

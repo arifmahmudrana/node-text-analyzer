@@ -18,3 +18,4 @@ docker-compose*.yml
 Dockerfile*
 k8s
 k8s-local-dev-*.sh
+k8s-local-demo.gif

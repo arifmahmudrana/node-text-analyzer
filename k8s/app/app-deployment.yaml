@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: text-analyzer-api
+  namespace: infra-ns-node-text-analyzer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: text-analyzer-api
+  template:
+    metadata:
+      labels:
+        app: text-analyzer-api
+    spec:
+      containers:
+        - name: text-analyzer-api
+          image: arifmahmudrana/text-analyzer-api:1.0.11
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: text-analyzer-config
+            - secretRef:
+                name: text-analyzer-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+
+        - name: promtail
+          image: grafana/promtail:2.9.1
+          args: ["--config.file=/etc/promtail/promtail.yaml"]
+          volumeMounts:
+            - name: logs
+              mountPath: /var/logs
+              readOnly: true
+            - name: promtail-config
+              mountPath: /etc/promtail
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: promtail-config
+          configMap:
+            name: promtail-config

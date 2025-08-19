@@ -1,0 +1,7 @@
+# k8s/infra-ns.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra-ns-node-text-analyzer
+  labels:
+    name: infra-ns

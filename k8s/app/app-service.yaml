@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: text-analyzer-api
+  namespace: infra-ns-node-text-analyzer
+spec:
+  type: ClusterIP
+  selector:
+    app: text-analyzer-api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

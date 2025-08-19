@@ -1,0 +1,38 @@
+# k8s/mongodb-values.yaml
+global:
+  security:
+    allowInsecureImages: true
+
+auth:
+  enabled: true
+  rootUser: "admin"
+  rootPassword: "textapi123"
+  usernames:
+    - "textapi"
+  passwords:
+    - "textapi123"
+  databases:
+    - "textapi"
+
+persistence:
+  enabled: true
+  size: 8Gi
+  storageClass: "hostpath"
+
+service:
+  type: ClusterIP
+  ports:
+    mongodb: 27017
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "250m"
+
+image:
+  repository: dlavrenuek/bitnami-mongodb-arm
+  tag: "8.0"
+  pullPolicy: IfNotPresent

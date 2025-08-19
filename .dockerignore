@@ -17,3 +17,4 @@ jest.config.js
 docker-compose*.yml
 Dockerfile*
 k8s
+k8s-local-dev-*.sh

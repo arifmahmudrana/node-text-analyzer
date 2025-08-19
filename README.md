@@ -413,6 +413,20 @@ The project uses Jest for testing with configurations for:
 - Unit tests for individual functions
 - Mocking for external dependencies
 
+## Run using a k8s cluster 
+
+If you are using arm architecture:
+
+```bash
+./k8s-local-dev-up.sh # to up the environment it will spin up MongoDB, PLG stack and create deployment all in a separate namespace
+```
+```bash
+./k8s-local-dev-down.sh # to cleanup everything 
+```
+If you are using a different architecture or then update the `k8s/mongodb-values.yaml` file image option and you can change the image tag in the `k8s/app/app-deployment.yaml` file and adjust.
+
+![demo](./k8s-local-demo.gif)
+
 ## Contributing
 
 1. Fork the repository

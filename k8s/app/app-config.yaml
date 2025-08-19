@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: text-analyzer-config
+  namespace: infra-ns-node-text-analyzer
+data:
+  PORT: "3000"
+  NODE_ENV: "production"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: text-analyzer-secrets
+  namespace: infra-ns-node-text-analyzer
+type: Opaque
+stringData:
+  MONGODB_URI: "mongodb://textapi:textapi123@mongodb.infra-ns-node-text-analyzer.svc.cluster.local:27017/textapi?authSource=textapi"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: infra-ns-node-text-analyzer
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    clients:
+      - url: http://loki.infra-ns-node-text-analyzer.svc.cluster.local:3100/loki/api/v1/push
+
+    scrape_configs:
+      - job_name: text-analyzer-api
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              job: text-analyzer
+              app: text-analyzer-api
+              namespace: infra-ns-node-text-analyzer
+              environment: "production"
+              __path__: /var/logs/app-prod.log
